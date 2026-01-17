@@ -1,0 +1,14 @@
+[package]
+name = "simple-rest-api"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+actix-web = "4.12.1"
+config = "0.15.19"
+env_logger = "0.11.8"
+quick-xml = { version = "0.39.0", features = ["serialize"] }
+reqwest = { version = "0.13.1", features = ["json"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde-xml-rs = "0.8.2"
+serde_json = "1.0.149"
