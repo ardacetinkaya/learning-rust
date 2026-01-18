@@ -1,11 +1,13 @@
-mod settings;
-mod models;
 mod euroleague;
+mod extractors;
+mod models;
+mod settings;
 
-use settings::Settings;
-use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
-use models::greeting::Greeting;
+use actix_web::{App, HttpResponse, HttpServer, Responder, get, post, web};
 use euroleague::euroleague::EuroleagueClient;
+use extractors::{GamePathParams, ValidatedPath};
+use models::greeting::Greeting;
+use settings::Settings;
 
 #[get("/")]
 async fn hello() -> impl Responder {
@@ -22,14 +24,16 @@ async fn echo(req_body: String) -> impl Responder {
 #[get("/games/{season}/{code}")]
 async fn get_game(
     client: web::Data<EuroleagueClient>,
-    path: web::Path<(String, u32)>,
+    params: ValidatedPath<GamePathParams>,
 ) -> impl Responder {
-    let (season, code) = path.into_inner();
-    match client.get_game(&season, code).await {
+    match client.get_game(&params.0.season, params.0.code).await {
         Ok(game) => HttpResponse::Ok().json(game),
         Err(e) => {
             eprintln!("Error fetching game: {:?}", e);
-            HttpResponse::InternalServerError().finish()
+            HttpResponse::InternalServerError().json(serde_json::json!({
+                "error": "Failed to fetch game data",
+                "message": "An error occurred while retrieving game information"
+            }))
         }
     }
 }
@@ -42,7 +46,10 @@ async fn main() -> std::io::Result<()> {
     let euroleague_client = EuroleagueClient::new(settings.euroleague.base_url.clone());
     let client_data = web::Data::new(euroleague_client);
 
-    println!("Starting server at http://{}:{}/", settings.server.host, settings.server.port);
+    println!(
+        "Starting server at http://{}:{}/",
+        settings.server.host, settings.server.port
+    );
 
     HttpServer::new(move || {
         App::new()
